@@ -1,0 +1,60 @@
+{% extends 'BotBundle:Default:base.html.twig' %}
+{% block body %}
+    <div class="container">
+        <div class="row william_hill">
+            <h3>William Hill</h3>
+            <form class="form-inline">
+                <div class="form-group">
+                    <label for="email">Всавьте id или ссылку матча:</label>
+                    <input type="text" class="form-control" name="watch" id="watch" required>
+                </div>
+                <button type="submit" class="btn btn-default watch_button">Следить</button>
+            </form>
+        </div>
+        <div class="row fonbel">
+            <h3>Fonbel</h3>
+            <div class="form-group col-sm-4 col-xs-12">
+                <form class="form-horizontal">
+                    <div class="form-group">
+                        <label class="control-label col-sm-3" for="login">Логин:</label>
+                        <div class="col-sm-9">
+                            <input type="text" class="form-control" name="login" id="login" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="control-label col-sm-3" for="password">Пароль:</label>
+                        <div class="col-sm-9">
+                            <input type="text" class="form-control" name="password" id="password" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="col-sm-offset-3 col-sm-9">
+                            <button class="btn btn-default authorization_button">Авторизаваться</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="form-group col-sm-8 col-xs-12">
+                <form class="form-horizontal">
+                    <div class="form-group">
+                        <label class="control-label col-sm-5" for="bet">Сумма ставки:</label>
+                        <div class="col-sm-7 form-inline">
+                            <input type="text" class="form-control" name="login" id="login" required>
+                            <button class="btn btn-default set_button">Установить</button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="control-label col-sm-5" for="match_number">Номер матча:</label>
+                        <div class="col-sm-7 form-inline">
+                            <input type="text" class="form-control" name="match_number" id="match_number" required>
+                            <button class="btn btn-default start_button">Старт</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <div class="row log">
+            <h3>Лог</h3>
+        </div>
+    </div>
+{% endblock %}
