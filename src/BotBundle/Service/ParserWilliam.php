@@ -20,35 +20,39 @@ class ParserWilliam
 
     private $host = 'hub:4444/wd/hub';
 
-    private $pageObject;
-
     private $clickElement = '//*[@id="bottomContainer"]/div/div[2]/nav/ul/li[3]/a';
+
+    private $title = [
+        '//*[@id="topContainer"]/div[1]/div/div[1]',
+        '//*[@id="topContainer"]/div[1]/div/div[3]'
+    ];
+
+    /**
+     * @var RemoteWebDriver
+     */
+    private $pageObject;
 
     public function __construct($url)
     {
         $this->url = $url;
-        $this->pageObject = new IndexPageObject();
-    }
-
-    /**
-     * @return RemoteWebDriver
-     */
-    public function connect()
-    {
         $driver = RemoteWebDriver::create($this->host, DesiredCapabilities::chrome());
         $driver->get($this->url);
-        FeatureContext::setWebDriver($driver);
-        IndexPageObject::findElementAndClick($this->clickElement);
+        $this->pageObject = new IndexPageObject($driver);
+    }
 
-        return $driver;
+    public function connect()
+    {
+        $html = $this->pageObject->indexGetDriver()->getPageSource();
+        $this->pageObject->indexFindElementAndClick($this->clickElement);
+
+        return;
     }
 
     public function getContent()
     {
-        $elements = IndexPageObject::findElements(self::ELEMENT);
+        $elements = $this->pageObject->indexFindElements(self::ELEMENT);
 
         if (count($elements) == 0) {
-            print 'test';
             $this->getContent();
         }
 
@@ -58,5 +62,34 @@ class ParserWilliam
             break;
         }
         return $text;
+    }
+
+    public function getTitle()
+    {
+        $elementsA = $this->pageObject->indexFindElements($this->title[0]);
+        $elementsB = $this->pageObject->indexFindElements($this->title[1]);
+
+        if (count($elementsA) == 0) {
+            $this->getTitle();
+        }
+
+        $textA = null;
+        foreach ($elementsA as $element) {
+            $textA = $element->getText();
+            break;
+        }
+
+        if (count($elementsA) == 0) {
+            $this->getTitle();
+        }
+
+        $textB = null;
+        foreach ($elementsB as $element) {
+            $textB = $element->getText();
+            break;
+        }
+
+
+        return trim($textA.' v '.$textB);
     }
 }

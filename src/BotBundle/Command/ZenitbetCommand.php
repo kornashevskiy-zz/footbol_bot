@@ -24,7 +24,7 @@ class ZenitbetCommand extends ContainerAwareCommand
 
     public function execute(InputInterface $input, OutputInterface $output)
     {
-        $zenitService = new ZenitbetService('102');
+        $zenitService = new ZenitbetService(897);
 
         if ($zenitService->authorization()) {
             $zenitService->goToMatch();

@@ -11,28 +11,22 @@ namespace BotBundle\Service;
 
 class IndexPageObject extends PageObject
 {
-
-    public static function downloadByUrl($url)
-    {
-
-    }
-
-    public static function findElements($xpath, $isShow=true){
+    public static function indexFindElements($xpath, $isShow=true){
 
         return parent::findElements($xpath, false);
     }
 
-    public static function findElementAndClick($xpath)
+    public function indexFindElementAndClick($xpath)
     {
         parent::findElementAndClick($xpath);
     }
 
-    public static function findElementAndSendKey($xpath, $data, $clearInput = true)
+    public static function indexFindElementAndSendKey($xpath, $data, $clearInput = true)
     {
         parent::findElementAndSendKey($xpath, $data, $clearInput = true);
     }
 
-    public static function checkAndClick($xpath)
+    public static function indexCheckAndClick($xpath)
     {
         $flash_message = PageObject::findElements($xpath);
 
@@ -40,5 +34,10 @@ class IndexPageObject extends PageObject
             PageObject::findElementAndClick($xpath);
         }
         return;
+    }
+
+    public function indexGetDriver()
+    {
+        return parent::getDriver();
     }
 }

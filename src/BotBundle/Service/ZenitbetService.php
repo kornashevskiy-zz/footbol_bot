@@ -16,10 +16,6 @@ class ZenitbetService
 {
     private $host = 'hub:4444/wd/hub';
     private $url = 'https://zenitbet.com/index2';
-    private $data = [
-        '4430531',
-        'abramovich111'
-    ];
     private $dataHandler;
 
     private $xpath = [
@@ -32,34 +28,36 @@ class ZenitbetService
         'live_bet' => '//*[@id="header-menu-main"]/li[5]/a',
         'footbol_checkbox' => '//*[@id="live-sid-26"]',
         'download' => '//*[@id="live-index-send"]',
-        'body' => '/body'
+        'body' => '/body',
+        'doBet' => '//*[@id="basket-dobet"]'
     ];
 
     public $title;
 
     private $match;
 
+    private $pageObject;
+
     public function __construct($match)
     {
         $this->match = $match;
         $this->dataHandler = new DataHandler();
-    }
-
-    public function authorization()
-    {
         $driver = RemoteWebDriver::create($this->host, DesiredCapabilities::chrome());
         $driver->get($this->url);
-        FeatureContext::setWebDriver($driver);
+        $this->pageObject = new IndexPageObject($driver);
+    }
 
-        for ($i = 0; $i < count($this->data); $i++) {
-            IndexPageObject::findElementAndSendKey($this->xpath[$i], $this->data[$i]);
+    public function authorization(array $data)
+    {
+        for ($i = 0; $i < 2; $i++) {
+            $this->pageObject->indexFindElementAndSendKey($this->xpath[$i], $data[$i]);
         }
 
-        IndexPageObject::checkAndClick($this->xpath['flash_message']);
-        IndexPageObject::findElementAndClick($this->xpath['button']);
-        IndexPageObject::checkAndClick($this->xpath['close_modal']);
+        $this->pageObject->indexCheckAndClick($this->xpath['flash_message']);
+        $this->pageObject->indexFindElementAndClick($this->xpath['button']);
+        $this->pageObject->indexCheckAndClick($this->xpath['close_modal']);
 
-        $element = IndexPageObject::findElements($this->xpath['account']);
+        $element = $this->pageObject->indexFindElements($this->xpath['account']);
 
         if (count($element) > 0) {
             return true;
@@ -71,12 +69,12 @@ class ZenitbetService
 
     public function goToMatch()
     {
-        IndexPageObject::findElementAndClick($this->xpath['live_bet']);
-        IndexPageObject::findElementAndClick($this->xpath['footbol_checkbox']);
-        IndexPageObject::findElementAndClick($this->xpath['download']);
+        $this->pageObject->indexFindElementAndClick($this->xpath['live_bet']);
+        $this->pageObject->indexFindElementAndClick($this->xpath['footbol_checkbox']);
+        $this->pageObject->indexFindElementAndClick($this->xpath['download']);
         sleep(1);
 
-        $html = FeatureContext::getWebDriver()->getPageSource();
+        $html = $this->pageObject->indexGetDriver()->getPageSource();
 
         $position = $this->dataHandler->findMatch($html, $this->match);
 
@@ -94,33 +92,45 @@ class ZenitbetService
         $click = false;
         while (!$click) {
             try {
-                IndexPageObject::findElementAndClick($xpath);
+                $this->pageObject->indexFindElementAndClick($xpath);
                 $click = true;
             } catch (\Exception $e) {
+                $massage = $e->getMessage();
 
             }
         }
 
         sleep(1);
-//        FeatureContext::getWebDriver()->takeScreenshot('web/gg.png');
+
+        return $position['title'];
     }
 
     public function setBet()
     {
-        $html = FeatureContext::getWebDriver()->getPageSource();
+        $html = $this->pageObject->indexGetDriver()->getPageSource();
         $betId = $this->dataHandler->findBet($html, $this->title[0]);
         $xpath = '//*[@id="'.$betId.'"]';
+        $this->click($xpath);
+
+        sleep(1);
+        $html = $this->pageObject->indexGetDriver()->getPageSource();
+        $inputId = $this->dataHandler->findInputId($html);
+        $xpath = '//*[@id="'.$inputId.'"]';
+        $this->pageObject->indexFindElementAndSendKey($xpath, 1);
+//        $this->click($this->xpath['doBet']);
+        $this->pageObject->indexGetDriver()->takeScreenshot('gg.png');
+    }
+
+    private function click($xpath)
+    {
         $click = false;
         while (!$click) {
             try {
-                IndexPageObject::findElementAndClick($xpath);
+                $this->pageObject->indexFindElementAndClick($xpath);
                 $click = true;
             } catch (\Exception $e) {
 
             }
         }
-        sleep(1);
-        FeatureContext::getWebDriver()->takeScreenshot('web/gg.png');
-        exit;
     }
 }

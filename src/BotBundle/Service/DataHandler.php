@@ -15,7 +15,7 @@ class DataHandler
 {
     private $title = null;
     private $id = null;
-
+    private $firstB = false;
     private $betId = null;
 
     public function findMatch($html, $match)
@@ -53,11 +53,34 @@ class DataHandler
                 preg_match('/^(\d+.*гол)/', $text, $matches);
 
                 if (isset($matches[0])) {
-                    if (trim($div->filter('b:nth-child(1)')->text()) == trim($name)) {
-                        $this->betId =  $div->filter('a:nth-child(1)')->attr('id');
-                    } elseif (trim($div->filter('b:nth-child(2)')->text()) == trim($name)) {
-                        $this->betId = $div->filter('a:nth-child(2)')->attr('id');
-                    }
+                    $div->filter('b')->each(function (Crawler $b, $i) use ($name, $div) {
+                        $title = trim($b->text());
+                        preg_match('/^(\d+.*гол)/', $title, $matches);
+
+                        if (isset($matches[0])) {
+                            $this->firstB = true;
+                        }
+
+                        if ($title == trim($name)) {
+                            $num = $this->firstB ? $i : $i + 1;
+                            $selector = 'a:nth-child('.$num.')';
+                            $html = $div->html();
+                            $selector = $div->filter('a')->getNode(0) != null ? 'a' : 'span';
+                            $div->filter($selector)->each(function (Crawler $node, $a) use ($num) {
+                                $tag = $node->nodeName();
+                                $text = $node->text();
+                                if ($tag == 'a') {
+                                    if ($a + 1 == $num) {
+                                        $this->betId = $node->attr('id');
+                                    }
+                                } elseif ($tag == 'span') {
+                                    $this->betId = $node->attr('class');
+                                }
+
+                            });
+//                            $this->betId = $div->filter($selector)->attr('id');
+                        }
+                    });
                 }
             });
         }
@@ -66,5 +89,30 @@ class DataHandler
             throw new \Exception('на этот матч нет ставок на гол');
         }
         return $this->betId;
+    }
+
+    public function findInputId($html)
+    {
+        $crawler = new Crawler($html);
+
+        return $this->checkNode('#basket-bets input', 'id', $crawler);
+    }
+
+    public function checkNode($selector, $attr, Crawler $node)
+    {
+        if ($node->filter($selector) != null) {
+            if ($attr == 'text') {
+                return trim($node->filter($selector)->text());
+            } else {
+                return trim($node->filter($selector)->attr($attr));
+            }
+        }
+
+        return null;
+    }
+
+    public function openModalTag()
+    {
+
     }
 }

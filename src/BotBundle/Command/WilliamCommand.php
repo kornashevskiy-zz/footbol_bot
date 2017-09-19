@@ -53,9 +53,7 @@ class WilliamCommand extends ContainerAwareCommand
             print 'exit out of while';
 
         } catch (\Exception $e) {
-            $e->getMessage();
-            $line = $e->getLine();
-            $file = $e->getFile();
+
         }
 
         print 'exit';
