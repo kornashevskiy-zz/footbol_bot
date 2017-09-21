@@ -2,3 +2,12 @@ services:
 #    bot.example:
 #        class: BotBundle\Example
 #        arguments: ["@service_id", "plain_value", "%parameter%"]
+    app.topic.service:
+        class: BotBundle\Topic\BotTopic
+        tag:
+            - {name: gos_web_socket.topic}
+    app.run_service:
+        class: BotBundle\Service\Run\RunCommand
+        public: true
+        arguments:
+            $kernel: '@kernel'

@@ -2,27 +2,26 @@
 /**
  * Created by PhpStorm.
  * User: alex
- * Date: 15.09.17
- * Time: 10:49
+ * Date: 20.09.17
+ * Time: 13:21
  */
 
 namespace BotBundle\Command;
 
 
-use BotBundle\Service\Connect;
-use BotBundle\Service\ZenitbetService;
 use Symfony\Bundle\FrameworkBundle\Command\ContainerAwareCommand;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
-class ZenitbetCommand extends ContainerAwareCommand
+class WebSocketCommand extends ContainerAwareCommand
 {
     public function configure()
     {
-        $this->setName('app:login');
+        $this->setName('app:start.socket.server');
     }
 
     public function execute(InputInterface $input, OutputInterface $output)
     {
+
     }
 }

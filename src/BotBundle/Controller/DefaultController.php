@@ -4,16 +4,12 @@ namespace BotBundle\Controller;
 
 use BotBundle\Form\IndexType;
 use BotBundle\Service\CompareService;
+use BotBundle\Service\DataHandler;
 use BotBundle\Service\FeatureContext;
-use BotBundle\Service\IndexPageObject;
-use BotBundle\Service\LinkHandler;
 use BotBundle\Service\ParserWilliam;
-use Facebook\WebDriver\Remote\DesiredCapabilities;
-use Facebook\WebDriver\Remote\RemoteWebDriver;
-use Facebook\WebDriver\WebDriverBy;
+use BotBundle\Service\ZenitbetService;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\Route;
-use Symfony\Component\DomCrawler\Crawler;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -31,11 +27,11 @@ class DefaultController extends Controller
         if ($form->isSubmitted() && $form->isValid()) {
             $data = $form->getData();
             try {
-//                $arrayTitles = CompareService::compareWilliamsAndZenitbet($data);
-                $arrayTitles = [
-                    'Матч на williamhill.com' => 'text',
-                    'Матч на zenitbet.com' => 'text',
-                ];
+                $arrayTitles = CompareService::compareWilliamsAndZenitbet($data);
+
+                /** for testing **/
+                /** end testing code */
+
                 return $this->render('BotBundle:Default:index.html.twig', [
                     'form' => $form->createView(),
                     'titles' => $arrayTitles,
@@ -46,7 +42,7 @@ class DefaultController extends Controller
             } catch (\Exception $e) {
                 return $this->render('BotBundle:Default:index.html.twig', [
                     'form' => $form->createView(),
-                    'error' => $e->getMessage().'<br/>'.$e->getLine().'<br/>'.$e->getLine(),
+                    'error' => $e->getMessage()." ".$e->getFile().'<br/>'.$e->getLine(),
                     'modal' => true,
                 ]);
             }
@@ -60,32 +56,77 @@ class DefaultController extends Controller
     }
 
     /**
-     * @Route("/ajax", name="ajax")
+     * @Route("/ajax/{data}", name="ajax", requirements={"data": ".*"})
      */
-    public function compareAction()
+    public function compareAction($data)
     {
-        for($i = 0; $i < 10; $i++) {
-            sleep(1);
-            echo 'text';
-            ob_flush();
-            flush();
+        try {
+            $content = json_decode($data, true);
+
+            $titles = CompareService::compareWilliamsAndZenitbet($content);
+
+            $williamArray = explode(' v ', $titles['Матч на williamhill.com']);
+            $zenitmArray = explode('-', $titles['Матч на zenitbet.com']);
+
+            if (is_array($williamArray) && is_array($zenitmArray)) {
+                $parser = ParserWilliam::getInstance();
+                $zenitService = ZenitbetService::getInstance();
+
+                FeatureContext::getWebDriver()->executeScript('window.open()');
+                $tabs = FeatureContext::getWebDriver()->getWindowHandles();
+                FeatureContext::getWebDriver()->switchTo()->window($tabs[0]);
+
+                $goal = false;
+                $str = '';
+
+                while (!$goal) {
+                    try {
+                        $parser->photo();
+                        $message = $parser->getContent();
+                    } catch (\Exception $e) {
+//                    print $e->getMessage().' '.$e->getFile().' '.$e->getLine();
+                    }
+
+                    $test = strpos($message, 'гол') != false;
+                    $test = strpos($message, 'гол') == 0;
+                    if (strpos($message, 'гол') != false || strpos($message, 'гол') === 0) {
+                        $start = microtime(true);
+                        for ($i = 0; $i <= count($williamArray); $i++) {
+                            if (strpos($message, $williamArray[$i]) != false || strpos($message, $williamArray[$i]) == 0) {
+                                $zenitService->setBet(trim($zenitmArray[$i]), $content['count_bet']);
+                                $end = microtime(true);
+                                $speed = bcsub($end, $start, 4);
+                                $str = DataHandler::addPoint($message);
+                                echo "<b>".$str."</b><br>";
+                                echo 'ставка сделана за '.$speed.' секунд';
+                            }
+                        }
+                        $goal = true;
+                    }
+
+
+                    if ($message != $str) {
+                        $str = $message;
+                        $newStr = DataHandler::addPoint($message);
+                        echo $newStr."<br>";
+                    }
+                }
+
+            } else {
+                throw new \Exception('Разделитель в заголовке матча не соответствует шаблону: William(match v match), zenit(match - match)');
+            }
+        } catch (\Exception $e) {
+            echo "<b>".$e->getMessage()."</b><br>";
         }
 
         return new Response();
     }
 
     /**
-     * @Route("info", name="info")
+     * @Route("test", name="info")
      */
     public function iniAction()
     {
-//        for($i = 0; $i < 10; $i++) {
-//            sleep(1);
-//            echo 'text';
-//            ob_flush();
-//            flush();
-//        }
-        echo phpinfo();
-        return new Response();
+        return $this->render('@Bot/Default/test.html.twig');
     }
 }

@@ -14,8 +14,10 @@ use Facebook\WebDriver\Remote\RemoteWebDriver;
 
 class ZenitbetService
 {
+    private static $instance;
+
     private $host = 'hub:4444/wd/hub';
-    private $url = 'https://zenitbet.com/index2';
+    private $url = 'https://zenitbet.com';
     private $dataHandler;
 
     private $xpath = [
@@ -38,13 +40,29 @@ class ZenitbetService
 
     private $pageObject;
 
-    public function __construct($match)
+    private $html;
+
+    private function __construct()
+    {
+        $this->dataHandler = new DataHandler();
+        FeatureContext::getWebDriver()->get($this->url);
+        $this->pageObject = new IndexPageObject();
+    }
+
+    public static function getInstance()
+    {
+        if (empty(self::$instance)) {
+            self::$instance = new self();
+        }
+        return self::$instance;
+    }
+
+    /**
+     * @param mixed $match
+     */
+    public function setMatch($match)
     {
         $this->match = $match;
-        $this->dataHandler = new DataHandler();
-        $driver = RemoteWebDriver::create($this->host, DesiredCapabilities::chrome());
-        $driver->get($this->url);
-        $this->pageObject = new IndexPageObject($driver);
     }
 
     public function authorization(array $data)
@@ -72,9 +90,18 @@ class ZenitbetService
         $this->pageObject->indexFindElementAndClick($this->xpath['live_bet']);
         $this->pageObject->indexFindElementAndClick($this->xpath['footbol_checkbox']);
         $this->pageObject->indexFindElementAndClick($this->xpath['download']);
-        sleep(1);
+        sleep(2);
 
-        $html = $this->pageObject->indexGetDriver()->getPageSource();
+        $check = false;
+        $i = 1;
+        while (!$check) {
+            $html = FeatureContext::getWebDriver()->getPageSource();
+            $check = $this->dataHandler->checkHtml($html, 'table');
+            if ($i > 500) {
+                throw new \Exception('не могу найти таблицы с матчами на zenitbet');
+            }
+        }
+
 
         $position = $this->dataHandler->findMatch($html, $this->match);
 
@@ -82,43 +109,81 @@ class ZenitbetService
             if ($value == null) {
                 throw new \Exception('не нашёл игру на Zenitbet');
             }
+
             if ($key == 'title') {
-                $this->title = explode('-', $value);
+                $title = explode('-', $value);
+                $xpath = '//*[@id="'.$position['id'].'"]';
+                $click = false;
+                while (!$click) {
+                    try {
+                        $this->pageObject->indexFindElementAndClick($xpath);
+                        $click = true;
+                    } catch (\Exception $e) {
+                        $massage = $e->getMessage();
+
+                    }
+                }
+                sleep(1);
+
+                $i = 1;
+                while($click) {
+                    $this->html = FeatureContext::getWebDriver()->getPageSource();
+                    if ($betId = $this->dataHandler->findBet($this->html, $title[0], true)) {
+                        $click = false;
+                    }
+                    if ($i > 500) {
+                        throw new \Exception('не могу найти необходимого элемента, что бы сделать ставку');
+                    }
+                    $i++;
+                }
             }
         }
-
-        $xpath = '//*[@id="'.$position['id'].'"]';
-
-        $click = false;
-        while (!$click) {
-            try {
-                $this->pageObject->indexFindElementAndClick($xpath);
-                $click = true;
-            } catch (\Exception $e) {
-                $massage = $e->getMessage();
-
-            }
-        }
-
-        sleep(1);
 
         return $position['title'];
     }
 
-    public function setBet()
+    public function setBet($title, $countBet)
     {
-        $html = $this->pageObject->indexGetDriver()->getPageSource();
-        $betId = $this->dataHandler->findBet($html, $this->title[0]);
-        $xpath = '//*[@id="'.$betId.'"]';
-        $this->click($xpath);
+        $betResult = false;
+        $i = 1;
+        while(!$betResult) {
+            /** @var array $betId */
+            $betId = $this->dataHandler->findBet($this->html, $title);
 
-        sleep(1);
-        $html = $this->pageObject->indexGetDriver()->getPageSource();
-        $inputId = $this->dataHandler->findInputId($html);
-        $xpath = '//*[@id="'.$inputId.'"]';
-        $this->pageObject->indexFindElementAndSendKey($xpath, 1);
-//        $this->click($this->xpath['doBet']);
-        $this->pageObject->indexGetDriver()->takeScreenshot('gg.png');
+            if (is_array($betId)) {
+                $betResult = true;
+            }
+            if ($i > 500) {
+                throw new \Exception('не могу найти необходимого элемента, что бы сделать ставку');
+            }
+            $i++;
+        }
+
+
+        if (array_key_exists('id', $betId)) {
+            $xpath = '//*[@id="'.$betId.'"]';
+            $this->click($xpath);
+        } elseif (array_key_exists('data-id', $betId)) {
+            $xpath = './/tr//a[@data-id='.$betId['data-id'].']';
+            $this->pageObject->indexFindElementAndClick($xpath);
+            sleep(1);
+        } else {
+            throw new \Exception('ненадежный путь для того, что бы сделать ставку');
+        }
+
+
+        while($betResult) {
+            $html = FeatureContext::getWebDriver()->getPageSource();
+            if ($inputId = $this->dataHandler->findInputId($html)) {
+                $xpath = '//*[@id="'.$inputId.'"]';
+                FeatureContext::getWebDriver()->takeScreenshot('gg.png');
+                $this->pageObject->indexFindElementAndSendKey($xpath, $countBet);
+                $betResult = false;
+            }
+        }
+
+        $this->click($this->xpath['doBet']);
+        FeatureContext::getWebDriver()->takeScreenshot('gg.png');
     }
 
     private function click($xpath)
@@ -132,5 +197,10 @@ class ZenitbetService
 
             }
         }
+    }
+
+    public function getSessionId()
+    {
+        return $this->pageObject->getSessionId();
     }
 }

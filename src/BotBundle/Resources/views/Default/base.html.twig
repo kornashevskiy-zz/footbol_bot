@@ -11,6 +11,8 @@
     </head>
     <body>
         {% block body %}{% endblock %}
+        <script type="text/javascript" src="{{ asset('js/gos_web_socket_client.js') }}"></script>
+        <script type="text/javascript" src="{{ asset('js/vendor/autobahn.min.js') }}"></script>
         {% block javascripts %}{% endblock %}
     </body>
 </html>

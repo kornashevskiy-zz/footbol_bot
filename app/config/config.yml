@@ -68,3 +68,10 @@ swiftmailer:
     username: '%mailer_user%'
     password: '%mailer_password%'
     spool: { type: memory }
+gos_web_socket:
+    server:
+        port: 3000        #The port the socket server will listen on
+        host: 127.0.0.1   #The host ip to bind to
+        router:
+            resources:
+                - '@BotBundle/Resources/config/pubsub/routing.yml'

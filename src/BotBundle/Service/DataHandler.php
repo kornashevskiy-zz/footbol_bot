@@ -28,11 +28,14 @@ class DataHandler
 
                 if ($tr->filter('td > span')->getNode(0) != null) {
 
-                    if ($tr->filter('td > span')->text() == $match) {
-                        $arr = ["\r", "\n", "\t"];
-                        $this->title = trim(str_replace($arr, '', $tr->filter('td > b')->text()));
-                        $this->id = $tr->filter('td > b')->attr('id');
+                    if ($tr->filter('td > span')->getNode(0) != null) {
+                        if ($tr->filter('td > span')->text() == $match) {
+                            $arr = ["\r", "\n", "\t"];
+                            $this->title = trim(str_replace($arr, '', $tr->filter('td > b')->text()));
+                            $this->id = $tr->filter('td > b')->attr('id');
+                        }
                     }
+
                 }
             });
         });
@@ -43,7 +46,7 @@ class DataHandler
         ];
     }
 
-    public function findBet($html, $name)
+    public function findBet($html, $name, $secondCheck = false)
     {
         $crawler = new Crawler($html);
 
@@ -63,22 +66,63 @@ class DataHandler
 
                         if ($title == trim($name)) {
                             $num = $this->firstB ? $i : $i + 1;
-                            $selector = 'a:nth-child('.$num.')';
-                            $html = $div->html();
                             $selector = $div->filter('a')->getNode(0) != null ? 'a' : 'span';
                             $div->filter($selector)->each(function (Crawler $node, $a) use ($num) {
                                 $tag = $node->nodeName();
                                 $text = $node->text();
                                 if ($tag == 'a') {
                                     if ($a + 1 == $num) {
-                                        $this->betId = $node->attr('id');
+
+                                        if ($node->attr('id') != null) {
+                                            $this->betId['id'] = $node->attr('id');
+                                        } elseif ($node->attr('data-id') != null) {
+                                            $this->betId['data-id'] = $node->attr('data-id');
+                                        }
                                     }
                                 } elseif ($tag == 'span') {
                                     $this->betId = $node->attr('class');
                                 }
 
                             });
-//                            $this->betId = $div->filter($selector)->attr('id');
+                        }
+                    });
+                }
+            });
+        }
+
+        if ($crawler->filter('table tr > td > div > div > b')->getNode(0) != null) {
+            $crawler->filter('table tr > td > div > div')->each(function (Crawler $div) use ($name) {
+                $text = trim($div->text());
+                preg_match('/^(\d+.*гол)/', $text, $matches);
+
+                if (isset($matches[0])) {
+                    $div->filter('b')->each(function (Crawler $b, $i) use ($name, $div) {
+                        $title = trim($b->text());
+                        preg_match('/^(\d+.*гол)/', $title, $matches);
+
+                        if (isset($matches[0])) {
+                            $this->firstB = true;
+                        }
+
+                        if ($title == trim($name)) {
+                            $num = $this->firstB ? $i : $i + 1;
+                            $selector = $div->filter('a')->getNode(0) != null ? 'a' : 'span';
+                            $div->filter($selector)->each(function (Crawler $node, $a) use ($num) {
+                                $tag = $node->nodeName();
+                                if ($tag == 'a') {
+                                    if ($a + 1 == $num) {
+
+                                        if ($node->attr('id') != null) {
+                                            $this->betId['id'] = $node->attr('id');
+                                        } elseif ($node->attr('data-id') != null) {
+                                            $this->betId['data-id'] = $node->attr('data-id');
+                                        }
+                                    }
+                                } elseif ($tag == 'span') {
+                                    $this->betId['span'] = $node->attr('class');
+                                }
+
+                            });
                         }
                     });
                 }
@@ -86,6 +130,10 @@ class DataHandler
         }
 
         if ($this->betId == null) {
+
+            if ($secondCheck) {
+                return false;
+            }
             throw new \Exception('на этот матч нет ставок на гол');
         }
         return $this->betId;
@@ -94,25 +142,44 @@ class DataHandler
     public function findInputId($html)
     {
         $crawler = new Crawler($html);
-
-        return $this->checkNode('#basket-bets input', 'id', $crawler);
+        $id = $this->checkNode('input', 'id', $crawler);
+        return $id;
     }
 
     public function checkNode($selector, $attr, Crawler $node)
     {
-        if ($node->filter($selector) != null) {
+        if ($node->filter($selector)->getNode(0) != null) {
             if ($attr == 'text') {
-                return trim($node->filter($selector)->text());
+                $res = trim($node->filter($selector)->text());
+                return $res;
             } else {
-                return trim($node->filter($selector)->attr($attr));
+                $res = trim($node->filter($selector)->attr($attr));
+                return $res;
             }
         }
 
         return null;
     }
 
-    public function openModalTag()
+    public static function addPoint($str)
     {
+        $len = strlen($str);
+        $cycle = 1024 - $len;
+        for ($i = 0; $i < $cycle; $i++) {
+            $str .='.';
+        }
 
+        return $str;
+    }
+
+    public function checkHtml($html, $element)
+    {
+        $crawler = new Crawler($html);
+
+        if ($crawler->filter($element)->getNode(0) != null) {
+            return true;
+        }
+
+        return false;
     }
 }

@@ -15,40 +15,23 @@ use Symfony\Component\Config\Definition\Exception\Exception;
 class PageObject
 {
 
-    const WAIT_TIMEOUT_IN_SECONDS = 45;
+    const WAIT_TIMEOUT_IN_SECONDS = 5;
     const INTERVAL_IN_MILLISECOND = 1000;
     const FILES_PATH = __DIR__ . '/../Files/';
 
     private static $xpathWaitElementBuffer;
     private static $isShow;
-    
-    /**
-     * @var RemoteWebDriver
-     */
-    private static $driver;
-    
-    public function __construct($driver)
-    {
-        self::$driver = $driver;
-    }
 
-    /**
-     * @return RemoteWebDriver
-     */
-    public static function getDriver()
-    {
-        return self::$driver;
-    }
-
+    public static $sessionId;
+    
     public static function refreshPage()
     {
-        self::$driver->navigate()->refresh();
+        FeatureContext::getWebDriver()->navigate()->refresh();
     }
-
 
     protected static function checkPrefix($prefix)
     {
-        $url = self::$driver->getCurrentURL();
+        $url = FeatureContext::getWebDriver()->getCurrentURL();
         $checkResult = stristr($url, $prefix);
         if (!$checkResult) {
             throw new Exception('We not on page with prefix "' . $prefix . '". You locate on url: ' . $url);
@@ -57,7 +40,7 @@ class PageObject
 
     protected static function openURLPage($url)
     {
-        self::$driver->get($url);
+        FeatureContext::getWebDriver()->get($url);
     }
 
     /**
@@ -68,7 +51,7 @@ class PageObject
     protected static function findElements($xpath, $isShow=true)
     {
         self::waitShow($xpath,$isShow);
-        $elements = self::$driver->findElements(WebDriverBy::xpath($xpath));
+        $elements = FeatureContext::getWebDriver()->findElements(WebDriverBy::xpath($xpath));
         return $elements;
     }
 
@@ -92,18 +75,27 @@ class PageObject
         return $textSelectedOption;
     }
 
-    protected static function findElementAndClick($xpath)
+    protected static function findElementAndClick($xpath, $method = 'xpath', $selector = false)
     {
-        self::waitShow($xpath);
-        $elements = self::$driver->findElements(WebDriverBy::xpath($xpath));
-        self::clickOnElement($elements[0]);
+        switch ($method) {
+            case 'xpath':
+                self::waitShow($xpath);
+                $elements = FeatureContext::getWebDriver()->findElements(WebDriverBy::xpath($xpath));
+                self::clickOnElement($elements[0]);
+                break;
+            case 'css':
+                self::waitShow($xpath, true, 'css', $selector);
+                $elements = FeatureContext::getWebDriver()->findElements(WebDriverBy::cssSelector($selector));
+                self::clickOnElement($elements[0]);
+                break;
+        }
     }
 
 
     protected static function findElementAndSendKey($xpath, $data, $clearInput = true)
     {
         self::waitShow($xpath);
-        $elements = self::$driver->findElements(WebDriverBy::xpath($xpath));
+        $elements = FeatureContext::getWebDriver()->findElements(WebDriverBy::xpath($xpath));
         $circle = 0;
         while (true) {
             try {
@@ -125,7 +117,7 @@ class PageObject
 
     protected static function inspectTheElements($xpath)
     {
-        $elements = self::$driver->findElements(WebDriverBy::xpath($xpath));
+        $elements = FeatureContext::getWebDriver()->findElements(WebDriverBy::xpath($xpath));
         $countElements = count($elements);
         if ($countElements > 0) {
             throw new Exception("On the page found elements by xpath: " . $xpath);
@@ -153,19 +145,30 @@ class PageObject
     /**
      * @param $xpath
      * @param bool $isShow
+     * @param $method
+     * @param $selector
      * @throws \Exception
      */
-    private static function waitShow($xpath,$isShow = true)
+    protected static function waitShow($xpath,$isShow = true, $method = 'xpath', $selector = false)
     {
         self::$xpathWaitElementBuffer = $xpath;
         self::$isShow = $isShow;
 
 
-//        print "[" . date('H:i:s') . "] Find element start by xpath: '".$xpath."'  On url:  " . self::$driver->getCurrentURL().PHP_EOL;
+//        print "[" . date('H:i:s') . "] Find element start by xpath: '".$xpath."'  On url:  " . FeatureContext::getWebDriver()->getCurrentURL().PHP_EOL;
         try {
-            self::$driver->wait(self::WAIT_TIMEOUT_IN_SECONDS, self::INTERVAL_IN_MILLISECOND)->until(function ($driver) {
-                /**@var RemoteWebDriver $driver */
-                $elements = $driver->findElements(WebDriverBy::xpath(self::$xpathWaitElementBuffer));
+            FeatureContext::getWebDriver()->wait(self::WAIT_TIMEOUT_IN_SECONDS, self::INTERVAL_IN_MILLISECOND)->until(function ($driver) use ($method, $selector) {
+
+                switch ($method) {
+                    case 'xpath':
+                        /**@var RemoteWebDriver $driver */
+                        $elements = $driver->findElements(WebDriverBy::xpath(self::$xpathWaitElementBuffer));
+                        break;
+                    case 'css':
+                        /**@var RemoteWebDriver $driver */
+                        $elements = $driver->findElements(WebDriverBy::cssSelector($selector));
+                }
+
                 if(self::$isShow){
                     return (
                         count($elements) > 0 &&
@@ -178,7 +181,7 @@ class PageObject
             });
 //            print "[" . date('H:i:s') . "] Find element stop" . PHP_EOL;
         } catch (\Exception $e) {
-            throw new \Exception("[" . date('H:i:s') . "] File not be find or element not display with xpath:" . $xpath . " \nby url: " . self::$driver->getCurrentURL() . PHP_EOL . PHP_EOL . $e->getMessage() . PHP_EOL);
+            throw new \Exception("[" . date('H:i:s') . "] File not be find or element not display with xpath:" . $xpath . " \nby url: " . FeatureContext::getWebDriver()->getCurrentURL() . PHP_EOL . PHP_EOL . $e->getMessage() . PHP_EOL);
         }
     }
 
@@ -188,7 +191,7 @@ class PageObject
     }
 
     public static function downloadByUrl($url){
-        $coookies = self::$driver->manage()->getCookies();
+        $coookies = FeatureContext::getWebDriver()->manage()->getCookies();
         $coookiesString  = "Cookie: ";
 
         foreach ($coookies as $cookie){
@@ -208,15 +211,29 @@ class PageObject
     }
 
     protected static function executeJsScript($scriptString){
-        $result = self::$driver->executeScript($scriptString);
+        $result = FeatureContext::getWebDriver()->executeScript($scriptString);
         return $result;
     }
 
     public static function getWebDriver(){
-        return self::$driver;
+        return FeatureContext::getWebDriver();
     }
 
     public static function pressKeyboardKey($key){
-        self::$driver->getKeyboard()->sendKeys($key);
+        FeatureContext::getWebDriver()->getKeyboard()->sendKeys($key);
+    }
+
+    public function getSessionId()
+    {
+        return self::$sessionId;
+    }
+
+    public function createNewTab(){
+        FeatureContext::getWebDriver()->executeScript('window.open()');
+    }
+
+    public function moveTab($indexTab){
+        $tabs = FeatureContext::getWebDriver()->getWindowHandles();
+        FeatureContext::getWebDriver()->switchTo()->window($tabs[$indexTab]);
     }
 }

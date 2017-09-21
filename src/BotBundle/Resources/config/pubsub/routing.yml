@@ -1,0 +1,5 @@
+app_topic_service:
+    channel: topic/channel
+    handler:
+        callback: 'app.topic.service' #related to the getName() of your topic
+

@@ -14,9 +14,11 @@ use Facebook\WebDriver\Remote\RemoteWebDriver;
 
 class ParserWilliam
 {
+    private static $instance;
+
     private $url;
 
-    const ELEMENT ='//*[@id="box_commentaries"]/ul/li/span[3]';
+    const ELEMENT ='//*[@id="box_commentaries"]/ul/li[1]/span[3]';
 
     private $host = 'hub:4444/wd/hub';
 
@@ -28,21 +30,38 @@ class ParserWilliam
     ];
 
     /**
-     * @var RemoteWebDriver
+     * @var IndexPageObject
      */
     private $pageObject;
 
-    public function __construct($url)
+    private function __construct()
+    {
+    }
+
+    public static function getInstance()
+    {
+        if (empty(self::$instance)) {
+            self::$instance = new self();
+        }
+
+        return self::$instance;
+    }
+
+    /**
+     * @param mixed $url
+     */
+    public function setUrl($url)
     {
         $this->url = $url;
         $driver = RemoteWebDriver::create($this->host, DesiredCapabilities::chrome());
+        FeatureContext::setWebDriver($driver);
         $driver->get($this->url);
-        $this->pageObject = new IndexPageObject($driver);
+        $this->pageObject = new IndexPageObject();
     }
 
     public function connect()
     {
-        $html = $this->pageObject->indexGetDriver()->getPageSource();
+        FeatureContext::getWebDriver()->getPageSource();
         $this->pageObject->indexFindElementAndClick($this->clickElement);
 
         return;
@@ -92,4 +111,10 @@ class ParserWilliam
 
         return trim($textA.' v '.$textB);
     }
+
+    public function photo()
+    {
+        FeatureContext::getWebDriver()->takeScreenshot('gg.png');
+    }
+
 }

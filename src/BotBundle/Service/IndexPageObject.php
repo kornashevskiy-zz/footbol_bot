@@ -16,6 +16,11 @@ class IndexPageObject extends PageObject
         return parent::findElements($xpath, false);
     }
 
+    public function indexFindElementAndClickByCss($selector)
+    {
+        parent::findElementAndClick('', 'css', $selector);
+    }
+
     public function indexFindElementAndClick($xpath)
     {
         parent::findElementAndClick($xpath);
@@ -23,7 +28,7 @@ class IndexPageObject extends PageObject
 
     public static function indexFindElementAndSendKey($xpath, $data, $clearInput = true)
     {
-        parent::findElementAndSendKey($xpath, $data, $clearInput = true);
+        parent::findElementAndSendKey($xpath, $data, $clearInput);
     }
 
     public static function indexCheckAndClick($xpath)
@@ -38,6 +43,11 @@ class IndexPageObject extends PageObject
 
     public function indexGetDriver()
     {
-        return parent::getDriver();
+        FeatureContext::getWebDriver();
+    }
+
+    public function getSessionId()
+    {
+        return parent::getSessionId();
     }
 }

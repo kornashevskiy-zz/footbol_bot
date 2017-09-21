@@ -94,8 +94,8 @@
 
             </div>
         </div>
-        <script src="{{ asset('js/main.js') }}"></script>
     {% endif %}
+    <!-- end Modal -->
 {% endblock %}
 
 {% block javascripts %}
@@ -104,6 +104,7 @@
         <script>
             $('#myModal').modal('show');
         </script>
+        <script src="{{ asset('js/main.js') }}"></script>
     {% endif %}
 
 {% endblock %}

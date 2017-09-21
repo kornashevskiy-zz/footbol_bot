@@ -15,24 +15,29 @@ class CompareService
     {
         $linkHandler = new LinkHandler();
         $link = $linkHandler->changeUrl($data['link']);
-        $parser = new ParserWilliam($link);
+        $parser = ParserWilliam::getInstance();
+        $parser->setUrl($link);
         $parser->connect();
 
         $williamTitle = $parser->getTitle();
 
-        $zenitService = new ZenitbetService($data['match_number']);
+        FeatureContext::getWebDriver()->executeScript('window.open()');
+        $tabs = FeatureContext::getWebDriver()->getWindowHandles();
+        FeatureContext::getWebDriver()->switchTo()->window($tabs[1]);
+
+        $zenitService = ZenitbetService::getInstance();
+        $parser->photo();
+
+        $zenitService->setMatch($data['match_number']);
 
         if ($zenitService->authorization([$data['login'], $data['password']])) {
             $zenitTitle = $zenitService->goToMatch();
-            $zenitService->setBet();
+//            $newTitle = explode('-', $zenitTitle);
+//            $zenitService->setBet($newTitle[0], $data['count_bet']);
         } else {
             throw new \Exception('не могу авторизоваться, проверьте имя пользователя и пароль на соответствие: 
             Логин - '.$data['login'].', Пароль - '.$data['password']);
         }
-
-        $williamArray = explode(' v ', $williamTitle);
-        $zenitmArray = explode('-', $zenitTitle);
-
 
         return [
             'Матч на williamhill.com' => $williamTitle,

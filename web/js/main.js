@@ -4,17 +4,20 @@
 $(document).ready(function() {
     var agreeButton = document.getElementById('agreeButton');
     agreeButton.addEventListener("click", socketRun);
+
 });
 
 
 function socketRun() {
+    var data = document.getElementById('hiddenInput').value;
     var http = new XMLHttpRequest();
     http.onprogress = function(e) {
-        var p = document.createElement('p');
-        var text = document.createTextNode(e.currentTarget.responseText);
+        // alert(e.currentTarget.responseText);
+        var re = /\.+/g;
+        var str = e.currentTarget.responseText;
+        var newstr = str.replace(re, '');
         var div = document.getElementById('log');
-        p.appendChild(text);
-        div.appendChild(p);
+        div.innerHTML = newstr;
         // alert(e.currentTarget.responseText);
     };
     http.onreadystatechange = function() {
@@ -27,6 +30,6 @@ function socketRun() {
             // div.appendChild(p);
         }
     };
-    http.open('GET', '/ajax', true);
+    http.open('GET', '/ajax/'+data, true);
     http.send();
 }
